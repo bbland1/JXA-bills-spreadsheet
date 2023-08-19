@@ -1,5 +1,25 @@
 # Automatic Update Shortcut for Numbers Spreadsheet
-Utilizing apple's shortcuts to build a way that the bills spreadsheet in numbers can be automatically updated by anyone with the shortcut and the spreadsheet without having to manually update the date, and the balance depending on the bill.
+This shortcut and script creates an efficient bill management process utilizing a Numbers document and apple's schortcut. By automating the process of updating the due dates and balances of any selected bill. When executed, the shortcut presents a list of bills, allowing users to select one, multiple, or all bills for updating. That information is passed through the shortcut to the Javascript to preform the updates.
+
+*It can only be ran on an Apple computer, JXA is not able to be used on phones. I am not sure about iPads.*
+
+## What it does
+Upon input reception, the script performs the following operations:
+
+#### Data Preparation:
+  - The specified sheet is accessed, and the script verifies the presence of input data.
+  - Utilizing the known bill column, the script constructs a lookup map to expedite bill row identification.
+#### Iteration and Data Capture:
+  - The script iterates through the list of selected bills to locate their respective rows within the sheet.
+  - Current bill data, including due date, pay frequency, payment amount, and balance, is extracted and stored.
+    ##### Data Validation:
+      - For each bill, if any data points (due date, pay frequency, or payment amount) are null, appropriate messages are generated and   appended to an end message array.
+#### Date and Balance Adjustment:
+  - If the due date is before the current date, the script evaluates the pay frequency and increments the due date accordingly.
+  - If a balance exists, the payment amount is subtracted from the balance, and the updated balance is set in the spreadsheet.
+#### Document Update and Response:
+  - The Numbers document is saved to persist the changes made.
+  - The script generates a response containing the updates made, facilitating communication with external processes (e.g., shortcuts sends message).
 
 ## Getting it work on your computers
 Apple computers have an application called shortcuts. In shortcuts you can utilize apple's script editor/automator by using the `Run Javasctipt for automation` (you can also use Applescript or shell scripts, depending on what you want).
