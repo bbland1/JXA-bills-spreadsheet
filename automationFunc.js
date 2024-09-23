@@ -48,95 +48,84 @@ function run(input) {
 		let currentRow = rowLookupMap[targetValue];
 		// * find the row of that value to do the updating
 		if (!currentRow) {
-			return `Error: ${targetValue} could not be found.`
+			return `Error: ${targetValue} could not be found.`;
 		}
 
-		// * get the current values of other data to work with
-		const paymentFrequency = table.cells[`B${currentRow}`].value();
-		const currentDueDate = table.cells[`C${currentRow}`].value();
-		const paymentAmount = table.cells[`D${currentRow}`].value();
-		const payoffBalance = table.cells[`E${currentRow}`].value();
+		// * create an array of the row data to find any missing data
+		const billRowData = [
+			{value: table.cells[`B${currentRow}`].value(), label: 'Bill Frequency'},
+			{value: table.cells[`C${currentRow}`].value(), label: 'Due Date'},
+			{value: table.cells[`D${currentRow}`].value(), label: 'Payment'},
+			{value: table.cells[`E${currentRow}`].value(), label: 'Payoff Balance'}
+		]
+
+		const missingData = billRowData.filter(cell => cell.value === null && cell.label !== 'Payoff Balance').map(cell => cell.label)
 
 		// * because the shortcut sends an update message want to be able to know what a bill is missing
-		if (paymentFrequency === null || currentDueDate === null || paymentAmount === null) {
-			const missingData = [];
+		if (missingData.length > 0) {
+			return `Error: ${targetValue} could not be updated due to missing data: ${missingData.join(', ')}.`;
+		}
 
-			if (paymentFrequency === null) {
-				missingData.push('Bill Frequency');
-			}
+		const currentDueDate = billRowData[1].value
+		// * need the date to be the numerical short hand to do the math with
+		let month = currentDueDate.getMonth();
+		let day = currentDueDate.getDate();
+		let year = currentDueDate.getFullYear();
 
-			if (currentDueDate === null) {
-				missingData.push('Due Date');
-			}
+		// * makes sure the shortcut can be ran whenever but it will only update a bill if the date it is ran is after the listed due date
+		if (currentDate >= currentDueDate) {
+			let updatedDueDate;
 
-			if (paymentAmount === null) {
-				missingData.push('Payment');
-			}
-
-			updateMessage = `${targetValue} could not be updated due to missing data: ${missingData.join(', ')}.`;
-			updatedBillsInfo.push(updateMessage);
-		} else {
-
-			// * need the date to be the numerical short hand to do the math with
-			let month = currentDueDate.getMonth();
-			let day = currentDueDate.getDate();
-			let year = currentDueDate.getFullYear();
-
-			// * makes sure the shortcut can be ran whenever but it will only update a bill if the date it is ran is after the listed due date
-			if (currentDate >= currentDueDate) {
-				let updatedDueDate;
-
-				switch (paymentFrequency) {
-					case 'Monthly':
-						month = (month + 1) % 12;
-						if (month > 11) {
-							year++;
-						}
-						updatedDueDate = new Date(year, month, day);
-						break;
-					case 'Quarterly':
-						month = (month + 3) % 12;
-						if (month > 11) {
-							year++;
-						}
-						updatedDueDate = new Date(year, month, day);
-						break;
-					case 'Semi-Annually':
-						month = (month + 6) % 12;
-						if (month > 11) {
-							year++;
-						}
-						updatedDueDate = new Date(year, month, day);
-						break;
-					case 'Annually':
+			switch (paymentFrequency) {
+				case 'Monthly':
+					month = (month + 1) % 12;
+					if (month > 11) {
 						year++;
-						updatedDueDate = new Date(year, month, day);
-				}
+					}
+					updatedDueDate = new Date(year, month, day);
+					break;
+				case 'Quarterly':
+					month = (month + 3) % 12;
+					if (month > 11) {
+						year++;
+					}
+					updatedDueDate = new Date(year, month, day);
+					break;
+				case 'Semi-Annually':
+					month = (month + 6) % 12;
+					if (month > 11) {
+						year++;
+					}
+					updatedDueDate = new Date(year, month, day);
+					break;
+				case 'Annually':
+					year++;
+					updatedDueDate = new Date(year, month, day);
+			}
 
-				table.cells[`C${currentRow}`].value = updatedDueDate;
+			table.cells[`C${currentRow}`].value = updatedDueDate;
 
-				// * not all the bills have a balance so checked for if the balance isn't null to do the logic that is specific to those bills
-				if (payoffBalance != null) {
-					const updatedPayoffBalance = payoffBalance - paymentAmount;
+			// * not all the bills have a balance so checked for if the balance isn't null to do the logic that is specific to those bills
+			if (payoffBalance != null) {
+				const updatedPayoffBalance = payoffBalance - paymentAmount;
 
-					// this needed to be a template literal for the spreadsheet to register that this was a number and keep it's format
-					table.cells[`E${currentRow}`].value = `${updatedPayoffBalance}`;
+				// this needed to be a template literal for the spreadsheet to register that this was a number and keep it's format
+				table.cells[`E${currentRow}`].value = `${updatedPayoffBalance}`;
 
-					updateMessage = `${targetValue} due date updated to ${updatedDueDate.toLocaleString('default', { month: 'numeric', day: 'numeric', year: 'numeric' })} and balance updated to ${updatedPayoffBalance}.`;
+				updateMessage = `${targetValue} due date updated to ${updatedDueDate.toLocaleString('default', { month: 'numeric', day: 'numeric', year: 'numeric' })} and balance updated to ${updatedPayoffBalance}.`;
 
-					updatedBillsInfo.push(updateMessage);
-				} else {
-
-					updateMessage = `${targetValue} due date updated to ${updatedDueDate.toLocaleString('default', { month: 'numeric', day: 'numeric', year: 'numeric' })}.`;
-
-					updatedBillsInfo.push(updateMessage);
-				}
+				updatedBillsInfo.push(updateMessage);
 			} else {
 
-				updateMessage = `${targetValue} due date (${currentDueDate.toLocaleString('default', { month: 'numeric', day: 'numeric', year: 'numeric' })}) has not passed yet.`;
+				updateMessage = `${targetValue} due date updated to ${updatedDueDate.toLocaleString('default', { month: 'numeric', day: 'numeric', year: 'numeric' })}.`;
 
 				updatedBillsInfo.push(updateMessage);
 			}
+		} else {
+
+			updateMessage = `${targetValue} due date (${currentDueDate.toLocaleString('default', { month: 'numeric', day: 'numeric', year: 'numeric' })}) has not passed yet.`;
+
+			updatedBillsInfo.push(updateMessage);
 		}
 
 		// * should save the spreadsheet when done but it should still be open to check
